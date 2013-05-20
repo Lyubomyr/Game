@@ -1,5 +1,6 @@
 var canvas = {
     colors: ['red', 'orange', 'yellow', 'green', 'blue', 'violet', 'black', 'grey', 'brown', 'pink'],
+    alreadySelected: [],
 
     clear: function() {
         this.game.clearRect(0, 0, this.width, this.height);
@@ -27,8 +28,29 @@ var canvas = {
         }
     },
 
+    draw_frame: function(circle) {
+        var x = circle.col.colToX() - this.circleR - 2 ;
+        var y = circle.row.rowToY() - this.circleR - 2;
+        this.game.beginPath();
+        this.game.rect(x, y, this.cellSize, this.cellSize);
+        this.game.closePath();
+        this.game.stroke();
+    },
+
     select_group: function(selected) {
-            console.log(selected);
+        this.game.lineWidth = 2;
+
+        this.game.strokeStyle = "white";
+        for (var i = 0; i < this.alreadySelected.length; i++){
+            this.draw_frame(this.alreadySelected[i]);
+        }
+
+        this.game.strokeStyle = "red";
+        for (var i = 0; i < selected.length; i++){
+            this.draw_frame(selected[i]);
+        }
+
+        this.alreadySelected = selected;
     }
 
 };
@@ -51,25 +73,26 @@ var game = {
             return this.matrix;
     },
 
-    find_group: function(col, row) {
-        var color = matrix[col][row]
+    find_group: function(selecting) {
+        var col = selecting.col;
+        var row = selecting.row;
+        var color = this.matrix[col][row];
 
-        selected.pushIfGroupmate(this.matrix, col, row-1, color);
-        selected.pushIfGroupmate(this.matrix, col+1, row, color);
-        selected.pushIfGroupmate(this.matrix, col, row+1, color);
-        selected.pushIfGroupmate(this.matrix, col-1, row, color);
-        selected = selected.filter(Boolean);
+        this.selected.pushIfGroupmate(this.matrix, col, row-1, color);
+        this.selected.pushIfGroupmate(this.matrix, col+1, row, color);
+        this.selected.pushIfGroupmate(this.matrix, col, row+1, color);
+        this.selected.pushIfGroupmate(this.matrix, col-1, row, color);
 
-        sel_index++;
+        this.sel_index++;
 
-        if (sel_index < selected.length){
-            find_neighbors(selected[sel_index]);
+        if (this.sel_index < this.selected.length){
+          this.find_group(this.selected[this.sel_index]);
         }
     }
 
 };
 
-Array.prototype.pushIfGroupmate = function(col, row) {
+Array.prototype.notContains = function(col, row) {
     for (var i = 0; i < this.length; i++) {
         if (this[i].col === col && this[i].row === row) {
             return false;
@@ -141,8 +164,11 @@ $( document ).ready( function() {
         var x = e.pageX - this.offsetLeft;
         var y = e.pageY - this.offsetTop;
 
+        game.selected = [];
         game.selected.push({col: x.xToCol(), row: y.yToRow() });
-        var selected = game.find_group(x.xToCol(), y.yToRow())
-        canvas.select_group(selected);
+        game.sel_index = 0;
+
+        game.find_group(game.selected[0])
+        canvas.select_group(game.selected);
     });
 });
